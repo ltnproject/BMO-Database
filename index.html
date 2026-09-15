@@ -690,10 +690,40 @@
     ]
   };
   let AI_DATA = AI_DATA_EMBEDDED;
-  fetch("ai.json")
-    .then(r => r.ok ? r.json() : Promise.reject(new Error("bad response")))
-    .then(data => { AI_DATA = data; })
-    .catch(() => { /* no server available — AI_DATA stays as the embedded copy above */ });
+  let aiSource = "embedded fallback";
+
+  (function loadAIData(){
+    // cache: "no-store" + a cache-busting param stop GitHub Pages / browser
+    // caches from serving a stale or missing copy while you're editing it.
+    const url = "ai.json?cb=" + Date.now();
+    fetch(url, { cache: "no-store" })
+      .then(r => {
+        if(!r.ok) throw new Error("HTTP " + r.status + " fetching " + url);
+        return r.json();
+      })
+      .then(data => {
+        if(!data || !Array.isArray(data.intents)){
+          throw new Error("ai.json loaded but has no 'intents' array — check the file's JSON structure.");
+        }
+        AI_DATA = data;
+        aiSource = "ai.json (" + data.intents.length + " intents)";
+        console.info("[BMO] Loaded", aiSource);
+      })
+      .catch(err => {
+        // Deliberately NOT silent anymore — check the browser console (Safari:
+        // Settings > Advanced > enable Web Inspector, then connect from a Mac;
+        // Chrome/desktop: F12 > Console) to see exactly why this failed.
+        console.error(
+          "[BMO] Could not load ai.json — falling back to the small built-in answer set.\n" +
+          "Common causes: (1) ai.json isn't in the same folder as this HTML file, " +
+          "(2) the filename/case doesn't match exactly (GitHub Pages is case-sensitive), " +
+          "(3) it's not committed/pushed yet, or (4) it's still deploying.\n" +
+          "Try opening the file directly in a tab, e.g. https://yourdomain.com/ai.json — " +
+          "it should show raw JSON, not a 404 page.\n" +
+          "Underlying error:", err
+        );
+      });
+  })();
 
   function escapeRegExp(s){
     return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -722,6 +752,11 @@
     const low = msg.toLowerCase();
 
     if(low === "") return "Ask me anything — try \"what time is it?\" or \"hello\".";
+
+    if(/^(debug|status)$/.test(low)){
+      const count = (AI_DATA && AI_DATA.intents) ? AI_DATA.intents.length : 0;
+      return "Knowledge source: " + aiSource + " · " + count + " intents loaded.";
+    }
 
     // --- live app-state answers (need real data, so these run first) ---
     if(/screen ?time/.test(low)){
