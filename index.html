@@ -426,6 +426,7 @@
     <button class="sugg">What's on my to-do list?</button>
     <button class="sugg">What time is it?</button>
     <button class="sugg">What can you do?</button>
+    <button class="sugg">Quiz me!</button>
   </div>
   <div class="chat-input-row">
     <input id="chatInput" type="text" placeholder="Ask BMO something…" autocomplete="off">
@@ -728,23 +729,111 @@
   function escapeRegExp(s){
     return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
-  function matchIntent(low){
+
+  // Normalizes common British/American spelling differences so patterns
+  // like "favorite color" also match "favourite colour", "favorite colour", etc.
+  // without needing every variant spelled out in ai.json.
+  function normalizeSpelling(s){
+    return s
+      .replace(/\bcolour(s|ed|ing)?\b/gi, m => m.replace(/our/i, "or"))
+      .replace(/\bfavourite(s)?\b/gi, m => m.replace(/our/i, "or"))
+      .replace(/\bgrey\b/gi, "gray")
+      .replace(/\borganise(s|d|dr)?\b/gi, m => m.replace(/ise/i, "ize"))
+      .replace(/\brealise(s|d)?\b/gi, m => m.replace(/ise/i, "ize"));
+  }
+
+  // Expands common contractions to their full form so "you are dumb" and
+  // "you're dumb" (or "what's" / "what is", etc.) are treated the same,
+  // whichever way the pattern in ai.json happens to be written.
+  function normalizeContractions(s){
+    return s
+      .replace(/\byou're\b/gi, "you are")
+      .replace(/\bi'm\b/gi, "i am")
+      .replace(/\bwhat's\b/gi, "what is")
+      .replace(/\bwho's\b/gi, "who is")
+      .replace(/\bit's\b/gi, "it is")
+      .replace(/\bthat's\b/gi, "that is")
+      .replace(/\bthere's\b/gi, "there is")
+      .replace(/\bhere's\b/gi, "here is")
+      .replace(/\bhow's\b/gi, "how is")
+      .replace(/\blet's\b/gi, "let us")
+      .replace(/\bdon't\b/gi, "do not")
+      .replace(/\bdoesn't\b/gi, "does not")
+      .replace(/\bisn't\b/gi, "is not")
+      .replace(/\baren't\b/gi, "are not")
+      .replace(/\bcan't\b/gi, "cannot")
+      .replace(/\bwon't\b/gi, "will not")
+      .replace(/\bdidn't\b/gi, "did not")
+      .replace(/\bwasn't\b/gi, "was not");
+  }
+
+  function normalizeText(s){
+    return normalizeContractions(normalizeSpelling(s));
+  }
+
+  // A pattern matches if it appears as a whole phrase inside the message
+  // (word-boundaries on both ends, spelling- and contraction-normalized).
+  // Deliberately NOT "any word in any order" — that was tried and caused
+  // false positives, e.g. "what do you do" (capabilities) wrongly matching
+  // "what colour do you like" just because both contain "what","do","you".
+  function patternMatches(pattern, low){
+    return new RegExp("\\b" + escapeRegExp(pattern) + "\\b", "i").test(low);
+  }
+
+  function matchIntent(rawLow){
+    const low = normalizeText(rawLow);
     const intents = (AI_DATA && AI_DATA.intents) || [];
+    // Among ALL matching patterns (not just the first intent in the array),
+    // pick the longest/most specific one. Without this, a short generic
+    // pattern like "help" (in capabilities) would win over a longer, more
+    // specific one like "help me with homework" just by array order.
+    let best = null;
     for(const intent of intents){
       for(const p of intent.patterns){
-        const re = new RegExp("\\b" + escapeRegExp(p) + "\\b", "i");
-        if(re.test(low)){
-          const answers = intent.answers;
-          return answers[Math.floor(Math.random() * answers.length)];
+        const np = normalizeText(p);
+        if(patternMatches(np, low) && (!best || np.length > best.patternLength)){
+          best = { answers: intent.answers, patternLength: np.length };
         }
       }
     }
-    return null;
+    return best ? best.answers[Math.floor(Math.random() * best.answers.length)] : null;
   }
   function fallbackReply(){
     const list = (AI_DATA && AI_DATA.fallback && AI_DATA.fallback.length) ? AI_DATA.fallback :
       ["I'm still learning that one! Try asking about the time, your screen time, or your to-do list."];
     return list[Math.floor(Math.random() * list.length)];
+  }
+
+  /* ---------------- Hugging Face dataset (live science-trivia quiz) ----------------
+     Real Q&A pairs pulled live from a public dataset on the Hugging Face Hub —
+     allenai/sciq (~11.7k science questions) — via HF's free, public Datasets
+     Server API (https://huggingface.co/docs/dataset-viewer). No API key needed
+     for public datasets, and it's the same read-only REST API HF's own dataset
+     preview pages call from the browser.
+     Triggered by "quiz me" / "trivia" / "science quiz". Say "skip" to bail out
+     of a question you don't want to answer. */
+  const HF_DATASET = "allenai/sciq";
+  const HF_CONFIG = "default";
+  const HF_SPLIT = "train";
+  const HF_ROW_COUNT_ESTIMATE = 11679; // train split size — only used to pick a random offset
+  let pendingQuiz = null; // { question, answer }
+
+  function fetchRandomQuizQuestion(){
+    const offset = Math.floor(Math.random() * HF_ROW_COUNT_ESTIMATE);
+    const url = "https://datasets-server.huggingface.co/rows?dataset=" + encodeURIComponent(HF_DATASET) +
+                "&config=" + HF_CONFIG + "&split=" + HF_SPLIT + "&offset=" + offset + "&length=1";
+    return fetch(url)
+      .then(r => {
+        if(!r.ok) throw new Error("HTTP " + r.status + " from datasets-server");
+        return r.json();
+      })
+      .then(data => {
+        const row = data && data.rows && data.rows[0] && data.rows[0].row;
+        if(!row || !row.question || !row.correct_answer){
+          throw new Error("Unexpected row shape from allenai/sciq: " + JSON.stringify(data).slice(0, 200));
+        }
+        return { question: row.question, answer: row.correct_answer };
+      });
   }
 
   function respond(raw){
@@ -755,7 +844,30 @@
 
     if(/^(debug|status)$/.test(low)){
       const count = (AI_DATA && AI_DATA.intents) ? AI_DATA.intents.length : 0;
-      return "Knowledge source: " + aiSource + " · " + count + " intents loaded.";
+      return "Knowledge source: " + aiSource + " · " + count + " intents loaded. " +
+        "Science quiz: live from " + HF_DATASET + " (Hugging Face) — say \"quiz me\".";
+    }
+
+    // --- pending science-quiz answer takes priority over everything else ---
+    if(pendingQuiz){
+      if(/^(skip|cancel|stop|never ?mind|give up)$/.test(low)){
+        const q = pendingQuiz; pendingQuiz = null;
+        return "No worries — the answer was \"" + q.answer + "\".";
+      }
+      const q = pendingQuiz; pendingQuiz = null;
+      const correct = q.answer.toLowerCase();
+      const isRight = low.includes(correct) || correct.includes(low);
+      return isRight
+        ? "Correct! 🎉 It's \"" + q.answer + "\"."
+        : "Not quite — the answer was \"" + q.answer + "\".";
+    }
+    if(/quiz me|science quiz|^trivia$|pop quiz|ask me a (trivia|science) question/.test(low)){
+      return fetchRandomQuizQuestion()
+        .then(q => { pendingQuiz = q; return "Science trivia time! 🧪 " + q.question; })
+        .catch(err => {
+          console.error("[BMO] Could not reach the science trivia dataset (" + HF_DATASET + ") on Hugging Face.", err);
+          return "Couldn't reach the science trivia dataset just now — mind trying again in a bit?";
+        });
     }
 
     // --- live app-state answers (need real data, so these run first) ---
@@ -784,6 +896,23 @@
       return "You're " + (nameInput.value || "Aethryxz") + " — nice to chat with you.";
     }
 
+    // --- small bits of real logic, not just canned text ---
+    if(/flip (a )?coin|coin flip|toss (a )?coin/.test(low)){
+      return Math.random() < 0.5 ? "Heads!" : "Tails!";
+    }
+    if(/roll (a |the )?(die|dice)/.test(low)){
+      return "You rolled a " + (Math.floor(Math.random() * 6) + 1) + "!";
+    }
+    if(/random number/.test(low)){
+      const range = low.match(/(\d+)\D+(\d+)/);
+      if(range){
+        const a = parseInt(range[1], 10), b = parseInt(range[2], 10);
+        const lo = Math.min(a, b), hi = Math.max(a, b);
+        return "Your random number is " + (Math.floor(Math.random() * (hi - lo + 1)) + lo) + ".";
+      }
+      return "Your random number is " + (Math.floor(Math.random() * 100) + 1) + " (out of 100).";
+    }
+
     const mathMatch = msg.match(/-?\d+(?:\.\d+)?\s*[+\-*/]\s*-?\d+(?:\.\d+)?(?:\s*[+\-*/]\s*-?\d+(?:\.\d+)?)*/);
     if(mathMatch){
       const result = safeMath(mathMatch[0]);
@@ -803,7 +932,10 @@
     const input = document.getElementById("chatInput");
     input.value = "";
     setTimeout(()=>{
-      addMsg(respond(text), "bot");
+      // respond() usually returns a string, but the live quiz feature needs
+      // to fetch from Hugging Face first — Promise.resolve() lets both work
+      // through the same path without duplicating the addMsg/render logic.
+      Promise.resolve(respond(text)).then(reply => addMsg(reply, "bot"));
     }, 380);
   }
 
