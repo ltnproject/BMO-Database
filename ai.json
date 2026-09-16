@@ -1,7 +1,7 @@
 {
   "meta": {
     "name": "BMO-Brain",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Hardcoded question/answer knowledge base for the BMO chat concept. This is NOT a real trained model — every entry below is a manually written pattern and a list of canned replies. The front end matches the visitor's message against 'patterns' (simple substring matches) and returns a random pick from that entry's 'answers'.",
     "how_to_extend": "Add a new object to 'intents' with an 'id', an array of 'patterns' (lowercase words or short phrases that should trigger it), and an array of 'answers' (one is picked at random). Add extra one-off replies to 'fallback' — one of those is used when nothing matches."
   },
@@ -235,6 +235,156 @@
       "answers": [
         "That one's above my pay grade — but I'd guess it involves good company and a clear to-do list.",
         "Still working on that one. In the meantime, want help with your day?"
+      ]
+    },
+    {
+      "id": "fun_fact",
+      "patterns": ["fun fact", "tell me a fact", "random fact", "interesting fact", "give me a fact"],
+      "answers": [
+        "Honey never spoils — archaeologists have found 3,000-year-old honey that's still edible.",
+        "Bananas are berries, but strawberries technically aren't.",
+        "Octopuses have three hearts.",
+        "A day on Venus is longer than a year on Venus.",
+        "Sea otters hold hands while sleeping so they don't drift apart."
+      ]
+    },
+    {
+      "id": "riddle",
+      "patterns": ["tell me a riddle", "give me a riddle", "riddle me"],
+      "answers": [
+        "What has to be broken before you can use it? (An egg!)",
+        "What has keys but no locks, space but no room? (A keyboard!)",
+        "What gets wetter the more it dries? (A towel!)"
+      ]
+    },
+    {
+      "id": "motivate",
+      "patterns": ["motivate me", "give me motivation", "inspire me", "encourage me", "i need motivation"],
+      "answers": [
+        "You've got this. One small step counts more than a perfect plan you never start.",
+        "Progress beats perfect — pick one thing on your list and start there.",
+        "You've handled hard days before, and you'll handle this one too."
+      ]
+    },
+    {
+      "id": "advice",
+      "patterns": ["give me advice", "any advice", "help me decide", "what should i do"],
+      "answers": [
+        "Try breaking it into the smallest possible first step — that's usually the hard part.",
+        "When in doubt, pick the option you'd regret not trying.",
+        "Sleep on it if you can — decisions are easier with a clear head."
+      ]
+    },
+    {
+      "id": "compliment_user",
+      "patterns": ["compliment me", "say something nice", "make me feel good", "cheer me up"],
+      "answers": [
+        "You're doing better than you think you are.",
+        "You've got a good head on your shoulders — trust it.",
+        "Whatever it is, you've got this."
+      ]
+    },
+    {
+      "id": "recommend_movie",
+      "patterns": ["recommend a movie", "suggest a movie", "movie to watch", "what should i watch"],
+      "answers": [
+        "Depends on your mood — a comedy for a light night, a thriller if you want to stay up too late.",
+        "Can't go wrong with a good animated film — they hold up better than people expect."
+      ]
+    },
+    {
+      "id": "recommend_book",
+      "patterns": ["recommend a book", "suggest a book", "book to read", "what should i read"],
+      "answers": [
+        "If you want something quick, try short stories — easier to finish what you start.",
+        "Pick whatever genre you gravitate to on a bad day — that's usually your real favorite."
+      ]
+    },
+    {
+      "id": "capital_trivia",
+      "patterns": ["capital of france", "capital of japan", "capital of italy", "capital of germany"],
+      "answers": [
+        "Paris is the capital of France, Tokyo is Japan's, Rome is Italy's, and Berlin is Germany's."
+      ]
+    },
+    {
+      "id": "wifi_password",
+      "patterns": ["wifi password", "what is the wifi password", "network password"],
+      "answers": [
+        "Nice try — you'll have to ask whoever set up the router!",
+        "That's above my access level. Check the sticker on the router."
+      ]
+    },
+    {
+      "id": "sing_song",
+      "patterns": ["sing a song", "sing me a song", "can you sing"],
+      "answers": [
+        "I'd rather spare you that — but I can tell you a joke instead!",
+        "My singing voice is mostly beeps and boops. Want a joke instead?"
+      ]
+    },
+    {
+      "id": "birthday",
+      "patterns": ["it is my birthday", "today is my birthday", "happy birthday to me"],
+      "answers": [
+        "Happy birthday! 🎉 Hope it's a great one.",
+        "Happy birthday! Do something today that you actually enjoy."
+      ]
+    },
+    {
+      "id": "language",
+      "patterns": ["do you speak other languages", "can you speak spanish", "can you speak french", "do you know spanish", "do you speak spanish", "do you speak french"],
+      "answers": [
+        "I mostly stick to English in this demo, but I'd love to learn more someday.",
+        "Just English for now — one language at a time!"
+      ]
+    },
+    {
+      "id": "internet_connection",
+      "patterns": ["are you connected to the internet", "do you have wifi", "are you online right now"],
+      "answers": [
+        "This demo runs entirely in your browser — no live internet connection needed for me to chat.",
+        "I'm running right here on this page, connection or not."
+      ]
+    },
+    {
+      "id": "can_you_see_me",
+      "patterns": ["can you see me", "do you have a camera", "are you watching me"],
+      "answers": [
+        "No camera here — I can only read what you type.",
+        "I can't see or hear anything — just the messages you send me."
+      ]
+    },
+    {
+      "id": "privacy",
+      "patterns": ["are you recording me", "is this private", "do you save my messages", "is this safe"],
+      "answers": [
+        "This chat stays on your device in this demo — nothing is sent anywhere.",
+        "Nothing here gets uploaded — it's all running locally in your browser."
+      ]
+    },
+    {
+      "id": "would_you_rather",
+      "patterns": ["would you rather", "let us play would you rather"],
+      "answers": [
+        "Ooh, I like this game — what are the two options?",
+        "Go on then, give me the two choices!"
+      ]
+    },
+    {
+      "id": "favorite_person",
+      "patterns": ["who is your favorite person", "do you have a best friend", "who is your best friend"],
+      "answers": [
+        "You, obviously — you're the one I'm talking to!",
+        "Whoever I'm chatting with at the moment. Right now, that's you."
+      ]
+    },
+    {
+      "id": "homework_help",
+      "patterns": ["help me with homework", "help with my homework", "can you do my homework"],
+      "answers": [
+        "I can help with simple math here — try giving me something like 8+5.",
+        "I can't do full assignments in this demo, but throw a quick math problem my way!"
       ]
     }
   ],
