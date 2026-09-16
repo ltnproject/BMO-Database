@@ -3,7 +3,8 @@
     "name": "BMO-Brain",
     "version": "1.1.0",
     "description": "Hardcoded question/answer knowledge base for the BMO chat concept. This is NOT a real trained model — every entry below is a manually written pattern and a list of canned replies. The front end matches the visitor's message against 'patterns' (simple substring matches) and returns a random pick from that entry's 'answers'.",
-    "how_to_extend": "Add a new object to 'intents' with an 'id', an array of 'patterns' (lowercase words or short phrases that should trigger it), and an array of 'answers' (one is picked at random). Add extra one-off replies to 'fallback' — one of those is used when nothing matches."
+    "how_to_extend": "Add a new object to 'intents' with an 'id', an array of 'patterns' (lowercase words or short phrases that should trigger it), and an array of 'answers' (one is picked at random). Add extra one-off replies to 'fallback' — one of those is used when nothing matches.",
+    "companion_feature": "index.html also has a separate 'quiz me' feature that pulls real, live questions from the allenai/sciq dataset on Hugging Face via their public Datasets Server API — that one isn't stored in this file, since it's fetched fresh each time rather than hardcoded."
   },
 
   "intents": [
